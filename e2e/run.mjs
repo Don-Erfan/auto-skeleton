@@ -152,7 +152,7 @@ function inspect(ids) {
   return report;
 }
 
-const ids = ['ltr', 'rtl', 'scaled', 'inline'];
+const ids = ['ltr', 'rtl', 'scaled', 'vanilla', 'inline'];
 let failures = 0;
 const check = async (label) => {
   const report = await page.evaluate(inspect, ids);
@@ -186,9 +186,10 @@ const restored = await page.evaluate(() => ({
   overlays: document.querySelectorAll('[data-auto-skeleton-overlay]').length,
   inert: document.querySelectorAll('[inert]').length,
   opacity: getComputedStyle(document.querySelector('#ltr > .card')).opacity,
+  vanillaOpacity: getComputedStyle(document.querySelector('#vanilla > .card')).opacity,
   busy: document.querySelectorAll('[aria-busy]').length,
 }));
-const restoredOk = restored.overlays === 0 && restored.inert === 0 && restored.opacity === '1' && restored.busy === 0;
+const restoredOk = restored.overlays === 0 && restored.inert === 0 && restored.opacity === '1' && restored.vanillaOpacity === '1' && restored.busy === 0;
 if (!restoredOk) failures++;
 console.log(`${restoredOk ? 'ok  ' : 'FAIL'} [loaded] ${JSON.stringify(restored)}`);
 await shot('loaded');

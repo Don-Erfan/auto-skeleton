@@ -1,9 +1,8 @@
 {
   "name": "@don-erfan/auto-skeleton",
   "version": "1.0.0",
-  "description": "Zero-config skeleton loaders for React. Wrap any component and get a shimmer skeleton generated from its real DOM: same size, same shape, no hand-written <Skeleton /> components.",
+  "description": "Zero-config skeleton loaders generated from your real DOM. Framework-free TypeScript core plus a React component: same size, same shape, no hand-written <Skeleton /> components.",
   "keywords": [
-    "react",
     "skeleton",
     "skeleton-loader",
     "auto-skeleton",
@@ -12,6 +11,11 @@
     "loading",
     "loader",
     "content-loader",
+    "react",
+    "vue",
+    "svelte",
+    "angular",
+    "vanilla",
     "typescript"
   ],
   "author": "don-erfan (https://www.npmjs.com/~don-erfan)",
@@ -40,7 +44,24 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "./dist/react.d.ts"
+      ]
+    }
   },
   "files": [
     "dist",
@@ -50,7 +71,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -61,6 +82,11 @@
   },
   "peerDependencies": {
     "react": ">=16.14.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=16"

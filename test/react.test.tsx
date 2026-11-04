@@ -2,7 +2,7 @@ import * as React from 'react';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import AutoSkeletonDefault, { AutoSkeleton } from '../src';
+import AutoSkeletonDefault, { AutoSkeleton } from '../src/react';
 
 afterEach(cleanup);
 
@@ -29,7 +29,8 @@ describe('<AutoSkeleton>', () => {
     expect(root.hasAttribute('aria-busy')).toBe(false);
     expect(root.querySelector('[data-auto-skeleton-overlay]')).toBeNull();
     expect(root.style.position).toBe('relative');
-    expect(root.style.color).toBe('');
+    expect(root.hasAttribute('data-auto-skeleton-ssr')).toBe(false);
+    expect(root.querySelector('style')).toBeNull();
   });
 
   it('hides the content and renders an overlay while loading', () => {
@@ -42,7 +43,9 @@ describe('<AutoSkeleton>', () => {
     const root = container.firstElementChild as HTMLElement;
     expect(root.getAttribute('data-auto-skeleton')).toBe('loading');
     expect(root.getAttribute('aria-busy')).toBe('true');
-    expect(root.style.color).toBe('transparent');
+    // The server-rendering fallback is gone once the client has taken over.
+    expect(root.hasAttribute('data-auto-skeleton-ssr')).toBe(false);
+    expect(root.querySelectorAll('style')).toHaveLength(1);
 
     const overlay = root.querySelector('[data-auto-skeleton-overlay]') as HTMLElement;
     expect(overlay).not.toBeNull();
@@ -85,6 +88,8 @@ describe('<AutoSkeleton>', () => {
     expect(button.textContent).toBe('count 2');
     expect(button.hasAttribute('inert')).toBe(false);
     expect(container.querySelector('[data-auto-skeleton-overlay]')).toBeNull();
+    expect(container.firstElementChild!.hasAttribute('data-auto-skeleton')).toBe(false);
+    expect(container.firstElementChild!.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('does not remove an inert attribute it did not add', () => {
@@ -155,6 +160,50 @@ describe('<AutoSkeleton>', () => {
     expect(overlay.style.getPropertyValue('--auto-skeleton-duration')).toBe('2s');
   });
 
+  it('applies changed props while loading', () => {
+    const { container, rerender } = render(
+      <AutoSkeleton loading baseColor="#eee">
+        x
+      </AutoSkeleton>,
+    );
+    rerender(
+      <AutoSkeleton loading baseColor="#ddd" animation="none">
+        x
+      </AutoSkeleton>,
+    );
+    const overlay = container.querySelector('[data-auto-skeleton-overlay]') as HTMLElement;
+    expect(overlay.style.getPropertyValue('--auto-skeleton-base')).toBe('#ddd');
+    expect(overlay.getAttribute('data-animation')).toBe('none');
+  });
+
+  it('keeps a user-provided aria-busy', () => {
+    const { container, rerender } = render(
+      <AutoSkeleton loading aria-busy="false">
+        x
+      </AutoSkeleton>,
+    );
+    expect(container.firstElementChild!.getAttribute('aria-busy')).toBe('true');
+    rerender(
+      <AutoSkeleton loading={false} aria-busy="false">
+        x
+      </AutoSkeleton>,
+    );
+    expect(container.firstElementChild!.getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('cleans up on unmount', () => {
+    const outer = document.createElement('div');
+    document.body.appendChild(outer);
+    const { unmount } = render(
+      <AutoSkeleton loading>
+        <p>x</p>
+      </AutoSkeleton>,
+      { container: outer },
+    );
+    unmount();
+    expect(outer.innerHTML).toBe('');
+  });
+
   it('renders measured blocks', () => {
     const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
       const size = this.tagName === 'IMG' ? 48 : 200;
@@ -208,16 +257,18 @@ describe('<AutoSkeleton>', () => {
     expect(AutoSkeletonDefault).toBe(AutoSkeleton);
   });
 
-  it('renders on the server without touching the DOM', () => {
+  it('hides the content in server-rendered HTML until the client takes over', () => {
     const html = renderToString(
       <AutoSkeleton loading>
         <p>Hello</p>
       </AutoSkeleton>,
     );
-    expect(html).toContain('data-auto-skeleton="loading"');
-    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('data-auto-skeleton-ssr=""');
     expect(html).toContain('<p>Hello</p>');
     // The CSS must not be HTML-escaped (it uses the `>` combinator).
-    expect(html).toContain('[data-auto-skeleton="loading"]>:not([data-auto-skeleton-overlay])');
+    expect(html).toContain('[data-auto-skeleton-ssr]>:not(style){opacity:0!important');
+
+    const loaded = renderToString(<AutoSkeleton loading={false}>Hello</AutoSkeleton>);
+    expect(loaded).toBe('<div style="position:relative">Hello</div>');
   });
 });

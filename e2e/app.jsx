@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AutoSkeleton } from '../dist/index.js';
+import { autoSkeleton } from '../dist/index.js';
+import { AutoSkeleton } from '../dist/react.js';
 
 const AVATAR =
   'data:image/svg+xml,' +
@@ -54,6 +55,30 @@ const persian = {
   tags: ['ری‌اکت', 'تایپ‌اسکریپت'],
 };
 
+// Framework-free usage: plain DOM, driven by the core API only (React just hosts the page).
+function VanillaCard({ loading }) {
+  const ref = useRef(null);
+  const skeleton = useRef(null);
+  useEffect(() => {
+    const host = ref.current;
+    host.innerHTML = `
+      <article class="card">
+        <div class="head">
+          <img class="avatar" src="${AVATAR}" width="64" height="64" alt="">
+          <div><h2 class="name">Vanilla TS</h2><p class="handle">@no-framework · <b>0</b> deps</p></div>
+        </div>
+        <p class="bio">This card is plain HTML. Its skeleton comes from autoSkeleton(element).start().</p>
+        <div class="actions"><button type="button">Follow</button><input placeholder="Say hi"></div>
+      </article>`;
+    skeleton.current = autoSkeleton(host, { animation: 'shimmer' });
+    return () => skeleton.current.destroy();
+  }, []);
+  useEffect(() => {
+    skeleton.current.setLoading(loading);
+  }, [loading]);
+  return <div id="vanilla" ref={ref} />;
+}
+
 function App() {
   const [loading, setLoading] = useState(true);
   window.__setLoading = setLoading;
@@ -70,6 +95,7 @@ function App() {
           <UserProfileCard user={user} />
         </AutoSkeleton>
       </div>
+      <VanillaCard loading={loading} />
       <AutoSkeleton loading={loading} id="inline">
         Plain text directly inside the wrapper, <a href="#x">with a link</a>.
       </AutoSkeleton>
